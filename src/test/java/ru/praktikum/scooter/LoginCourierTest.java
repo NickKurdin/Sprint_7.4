@@ -1,156 +1,105 @@
 package ru.praktikum.scooter;
+import io.qameta.allure.Description;
+import io.qameta.allure.Step;
+import io.qameta.allure.junit4.DisplayName;
 import io.restassured.RestAssured;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.notNullValue;
-
-
-import io.restassured.response.Response;
 
 public class LoginCourierTest {
     Courier courierWithoutFirstName = new Courier("nickex", "nickex1234");
     Courier courierWithIncorrectPassword = new Courier("nickex", "nickex123", "Никита");
-    Courier nonExistentCourier = new Courier("kickex", "kickex123");
+    Courier nonExistentCourier = new Courier("nickex", "nickex123");
+    Courier courierWithoutLogin = new Courier("nickex123");
 
 
     @Before
-    public void setUpForCheckStatusCode(){
-        RestAssured.baseURI = "https://7e4cc509-0e10-49a8-a069-5525b46ad4a3.serverhub.praktikum-services.ru";
+    public void setUp(){
+        RestAssured.baseURI = "https://a2f15697-c406-4150-9786-30e92eb696a2.serverhub.praktikum-services.ru";
     }
     @Test
+    @DisplayName("Проверка статус кода")
+    @Description("Проверка статус кода ручки POST /api/v1/courier/login")
     public void checkStatusCode(){
-        given()
-                .header("Content-type","application/json")
-                .body(courierWithoutFirstName)
-                .post("/api/v1/courier");
-        given()
-                .header("Content-type","application-json")
-                .body(courierWithoutFirstName)
-                .when()
-                .post("/api/v1/courier/login")
-                .then().statusCode(200);
+        CourierAPI createAndLogin = new CourierAPI();
+        createAndLogin.createCourier(courierWithoutFirstName);
+        createAndLogin.loginCourier(courierWithoutFirstName).then().statusCode(200);
     }
-    @After
-    public void deleteCourierCreatedInCheckStatusCode(){
-        Response response = given()
-                .header("Content-type","application-json")
-                .body(courierWithoutFirstName)
-                .when()
-                .post("/api/v1/courier/login");
-        int id = response.path("id");
-        given()
-                .header("Content-type","application-json")
-                .body(String.format("{\"id\":%d}", id))
-                .when()
-                .delete("/api/v1/courier/{id}");
+    @Step("Создать курьера")
+    public void createCourierForCheckStatusCode(CourierAPI createAndLogin){
+        createAndLogin.createCourier(courierWithoutFirstName);
     }
-    @Before
-    public void setUpForIncorrectPassword(){
-        RestAssured.baseURI = "https://7e4cc509-0e10-49a8-a069-5525b46ad4a3.serverhub.praktikum-services.ru";
+    @Step("Авторизовать курьера и проверить статус кода")
+    public void loginCourierForCheckStatusCode(CourierAPI createAndLogin){
+        createAndLogin.loginCourier(courierWithoutFirstName).then().statusCode(200);
     }
+
     @Test
+    @DisplayName("Ввод некоректного пароля")
+    @Description("Ввод некоректного пароля через ручку POST /api/v1/courier/login")
     public void enterIncorrectPassword(){
-        given()
-                .header("Content-type","application/json")
-                .body(courierWithoutFirstName)
-                .post("/api/v1/courier");
-        given()
-                .header("Content-type","application-json")
-                .body(courierWithIncorrectPassword)
-                .when()
-                .post("/api/v1/courier/login")
-                .then().statusCode(404);
+        CourierAPI createAndLogin = new CourierAPI();
+        createAndLogin.createCourier(courierWithoutFirstName);
+        createAndLogin.loginCourier(courierWithIncorrectPassword).then().statusCode(200);
     }
-    @After
-    public void deleteCourierCreatedInEnterIncorrectPassword(){
-        Response response = given()
-                .header("Content-type","application-json")
-                .body(courierWithoutFirstName)
-                .when()
-                .post("/api/v1/courier/login");
-        int id = response.path("id");
-        given()
-                .header("Content-type","application-json")
-                .body(String.format("{\"id\":%d}", id))
-                .when()
-                .delete("/api/v1/courier/{id}");
+    @Step("Создать курьера")
+    public void createCourierForEnterIncorrectPassword(CourierAPI createAndLogin){
+        createAndLogin.createCourier(courierWithoutFirstName);
+    }
+    @Step("Авторизовать курьера с неверным паролем и проверить статус кода")
+    public void loginCourierForEnterIncorrectPassword(CourierAPI createAndLogin){
+        createAndLogin.loginCourier(courierWithoutFirstName).then().statusCode(200);
     }
 
-    @Before
-    public void setUpForLoginCourierWithoutLogin(){
-        RestAssured.baseURI = "https://7e4cc509-0e10-49a8-a069-5525b46ad4a3.serverhub.praktikum-services.ru";
-    }
     @Test
+    @DisplayName("Авторизация курьера без ввода логина")
+    @Description("Авторизация курьера без ввода логина через ручку POST /api/v1/courier/login")
     public void loginCourierWithoutLogin(){
-        given()
-                .header("Content-type","application/json")
-                .body(courierWithoutFirstName)
-                .post("/api/v1/courier");
-        given()
-                .header("Content-type","application-json")
-                .body(courierWithIncorrectPassword)
-                .when()
-                .post("/api/v1/courier/login")
-                .then().statusCode(400);
+        CourierAPI createAndLogin = new CourierAPI();
+        createAndLogin.createCourier(courierWithoutFirstName);
+        createAndLogin.createCourier(courierWithoutLogin).then().statusCode(400);
     }
-    @After
-    public void deleteCourierCreatedInLoginCourierWithoutLogin(){
-        Response response = given()
-                .header("Content-type","application-json")
-                .body(courierWithoutFirstName)
-                .when()
-                .post("/api/v1/courier/login");
-        int id = response.path("id");
-        given()
-                .header("Content-type","application-json")
-                .body(String.format("{\"id\":%d}", id))
-                .when()
-                .delete("/api/v1/courier/{id}");
+    @Step("Создать курьера")
+    public void createCourierForLoginCourierWithoutLogin(CourierAPI createAndLogin){
+        createAndLogin.createCourier(courierWithoutFirstName);
     }
-    @Before
-    public void setUpForLoginNonexistentCourier(){
-        RestAssured.baseURI = "https://7e4cc509-0e10-49a8-a069-5525b46ad4a3.serverhub.praktikum-services.ru";
+    @Step("Авторизовать курьера без ввода логина и проверить статус кода")
+    public void loginCourierForLoginCourierWithoutLogin(CourierAPI createAndLogin){
+        createAndLogin.createCourier(courierWithoutLogin).then().statusCode(400);
     }
+
     @Test
+    @DisplayName("Авторизация несуществующего курьера")
+    @Description("Авторизация несуществующего курьера через ручку POST /api/v1/courier/login")
     public void loginNonexistentCourier(){
-        given()
-                .header("Content-type","application-json")
-                .body(nonExistentCourier)
-                .when()
-                .post("/api/v1/courier/login")
-                .then().statusCode(404);;
+        CourierAPI createAndLogin = new CourierAPI();
+        createAndLogin.createCourier(nonExistentCourier).then().statusCode(404);;
     }
 
-    @Before
-    public void setUpForCheckBodyResponse(){
-        RestAssured.baseURI = "https://7e4cc509-0e10-49a8-a069-5525b46ad4a3.serverhub.praktikum-services.ru";
-    }
     @Test
+    @DisplayName("Проверка тела ответа")
+    @Description("Проверка наличия значения поля id в ответе ручки POST /api/v1/courier/login")
     public void checkBodyResponse(){
-        given()
-                .header("Content-type","application/json")
-                .body(courierWithoutFirstName)
-                .when()
-                .post("/api/v1/courier")
-                .then().assertThat().body("id", notNullValue());
+        CourierAPI createAndLogin = new CourierAPI();
+        createAndLogin.createCourier(courierWithoutFirstName);
+        createAndLogin.loginCourier(courierWithoutFirstName).then().assertThat().body("id", notNullValue());
+    }
+    @Step("Создать курьра")
+    public void createCourierForCheckBodyResponse(CourierAPI createAndLogin){
+        createAndLogin.createCourier(courierWithoutFirstName);
+    }
+    @Step("Авторизовать курьера и проверить наличие id в ответе ручки")
+    public void loginCourierForCheckBodyResponse(CourierAPI createAndLogin){
+        createAndLogin.loginCourier(courierWithoutFirstName).then().assertThat().body("id", notNullValue());
     }
 
     @After
-    public void deleteCourierCreatedInCheckBodyResponse(){
-        Response response = given()
-                .header("Content-type","application-json")
-                .body(courierWithoutFirstName)
-                .when()
-                .post("/api/v1/courier/login");
-        int id = response.path("id");
-        given()
-                .header("Content-type","application-json")
-                .body(String.format("{\"id\":%d}", id))
-                .when()
-                .delete("/api/v1/courier/{id}");//test comment
+    public void deleteCourier(){
+        CourierAPI delete = new CourierAPI();
+        int id = delete.loginCourier(courierWithoutFirstName).path("id");
+        delete.deleteCourier(id);
     }
 
 }

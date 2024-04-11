@@ -4,6 +4,7 @@ import io.qameta.allure.Description;
 import io.qameta.allure.Step;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.RestAssured;
+import io.restassured.response.Response;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -11,21 +12,20 @@ import org.junit.Test;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 public class CreateCourierTest {
-    Courier courierWithFullData = new Courier("nickex", "nickex1234", "Никита");
-    Courier courierWithoutLogin = new Courier("nickex1234");
-    Courier courierWithoutFirstName = new Courier("nickex", "nickex1234");
+    public Courier courier;
 
     @Before
     public void setUp(){
-        RestAssured.baseURI = "https://fceb4c18-0e7d-468c-89ba-6393b76ba729.serverhub.praktikum-services.ru";
+        RestAssured.baseURI = "http://qa-scooter.praktikum-services.ru";
     }
 
     @Test
     @DisplayName("Проверка статус кода")
     @Description("Проверка статус кода ручки POST /api/v1/courier")
     public void checkStatusCode(){
+        courier = new Courier("nick_assholeee", "nick", "Никита");
         CourierAPI create = new CourierAPI();
-        create.createCourier(courierWithFullData).then().statusCode(201);
+        create.createCourier(courier).then().statusCode(201);
     }
 
 
@@ -33,8 +33,9 @@ public class CreateCourierTest {
     @DisplayName("Проверка тела ответа")
     @Description("Проверка наличия значения true в ответе ручки POST /api/v1/courier")
     public void checkBodyResponse(){
+        courier = new Courier("nick_assholeeee", "nick", "Никита");
         CourierAPI create = new CourierAPI();
-        create.createCourier(courierWithFullData).then().assertThat().body("ok", equalTo(true));
+        create.createCourier(courier).then().assertThat().body("ok", equalTo(true));
     }
 
 
@@ -43,19 +44,19 @@ public class CreateCourierTest {
     @Description("Проверка невозможности создать 2 одинаковых курьеров в ручке POST /api/v1/courier")
     public void createDuplicateCourier(){
         CourierAPI create = new CourierAPI();
-        create.createCourier(courierWithFullData);
-        int statusCode = create.createCourier(courierWithFullData).statusCode();
-        Assert.assertTrue(statusCode != 201);
+        createFirstEqualCourier(create);
+        int statusCode = createSecondEqualCourier(create);
+        checkSecondCourierDoesNotCreate(statusCode);
     }
     @Step("Создание первого курьера")
-    public void createFirstEqualCourier(){
-        CourierAPI create = new CourierAPI();
-        create.createCourier(courierWithFullData);
+    public void createFirstEqualCourier(CourierAPI create){
+        courier = new Courier("nick_assholeeeee", "nick", "Никита");
+        create.createCourier(courier);
     }
     @Step("Создание второго курьера и получение статус кода")
-    public int createSecondEqualCourier(){
-        CourierAPI create = new CourierAPI();
-        int statusCode = create.createCourier(courierWithFullData).statusCode();
+    public int createSecondEqualCourier(CourierAPI create){
+        courier = new Courier("nick_assholeeeee", "nick", "Никита");
+        int statusCode = create.createCourier(courier).statusCode();
         return statusCode;
     }
     @Step("Проверить, что второй курьер не создаётся")
@@ -69,18 +70,18 @@ public class CreateCourierTest {
     @Description("Проверка невозможности создать 2 курьеров с одним и тем же логином в ручке POST /api/v1/courier")
     public void createCourierWithSameLogin(){
         CourierAPI create = new CourierAPI();
-        create.createCourier(courierWithFullData);
-        create.createCourier(courierWithFullData).then().statusCode(409);
+        createFirstWithSameLoginCourier(create);
+        createSecondWithSameLoginCourierAndCheckStatusCode(create);
     }
     @Step("Создание первого курьера")
-    public void createFirstWithSameLoginCourier(){
-        CourierAPI create = new CourierAPI();
-        create.createCourier(courierWithFullData);
+    public void createFirstWithSameLoginCourier(CourierAPI create){
+        courier = new Courier("nick_assholeeeeeee", "nick", "Никита");
+        create.createCourier(courier);
     }
     @Step("Создание второго курьера и проверка статус кода")
-    public void createSecondWithSameLoginCourierAndCheckStatusCode(){
-        CourierAPI create = new CourierAPI();
-        create.createCourier(courierWithFullData).then().statusCode(409);
+    public void createSecondWithSameLoginCourierAndCheckStatusCode(CourierAPI create){
+        courier = new Courier("nick_assholeeeeeee", "nick", "Никита");
+        create.createCourier(courier).then().statusCode(409);
     }
 
 
@@ -89,7 +90,8 @@ public class CreateCourierTest {
     @Description("Создание курьера без логина в ручке POST /api/v1/courier")
     public void createCourierWithoutLogin(){
         CourierAPI create = new CourierAPI();
-        create.createCourier(courierWithoutLogin)
+        courier = new Courier("nick");
+        create.createCourier(courier)
                 .then()
                 .assertThat()
                 .body("message", equalTo("Недостаточно данных для создания учетной записи"));
@@ -97,8 +99,12 @@ public class CreateCourierTest {
 
     @After
     public void deleteCourier(){
-        CourierAPI loginAndDelete = new CourierAPI();
-        int id = loginAndDelete.loginCourier(courierWithoutFirstName).path("id");
-        loginAndDelete.deleteCourier(id);
+        CourierAPI delete = new CourierAPI();
+        Response response = delete.loginCourier(courier);
+        int statusCode = response.statusCode();
+        if(statusCode == 200){
+            int id = response.path("id");
+            delete.deleteCourier(id);
+        }
     }
 }
